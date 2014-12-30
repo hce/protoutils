@@ -8,9 +8,17 @@
 
 -module(protojson).
 
+-export([rawjsontoproto/1, rawprototojson/1]).
+
 -export([jsontoproto/1, prototojson/1]).
 
 -include("json_pb.hrl").
+
+rawjsontoproto(JSON) when is_binary(JSON) ->
+    json_pb:encode(jsontoproto(mochijson2:decode(JSON))).
+
+rawprototojson(Proto) when is_binary(Proto) ->
+    mochijson2:encode(prototojson(json_pb:decode_jsonvalue(Proto))).
 
 prototojson(#jsonvalue{type='STRING', stringval=S}) ->
     S;

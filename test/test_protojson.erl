@@ -14,9 +14,9 @@ protojson_test() ->
 
     Decoded2 = mochijson2:encode(mochijson2:decode(Json)),
     
-    Encoded = iolist_to_binary(json_pb:encode(protojson:jsontoproto(mochijson2:decode(Json)))),
+    Encoded = iolist_to_binary(protojson:rawjsontoproto(Json)),
     
-    Decoded = mochijson2:encode(protojson:prototojson(json_pb:decode_jsonvalue(Encoded))),
+    Decoded = protojson:rawprototojson(Encoded),
 
     ?assertEqual(Decoded2, Decoded),
     ok.
