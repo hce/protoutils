@@ -1,0 +1,25 @@
+enum ErlangType {
+        ATOM = 1;
+        BINARY = 2;
+        BITSTRING = 3;
+        FLOAT = 4;
+        INTEGER = 5;
+	LIST = 6;
+	TUPLE = 7;
+	// Everything we cannot encode without erlang bifs,
+	// meaning PIDs, references, functions and ports.
+	ERLTERM = 8;
+}
+
+message ErlangValue {
+	optional ErlangType type = 1;
+	// Used both for BINARY, BITSTRING and ERLTERM
+	optional string stringval = 2;
+	optional double doubleval = 3;
+	optional sint64 intval = 4;
+	optional ErlangList listval = 5;
+}
+
+message ErlangList {
+	repeated ErlangValue values = 1;
+}
