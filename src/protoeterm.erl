@@ -34,7 +34,7 @@ term_to_proto(V) when is_binary(V)->
 
 term_to_proto(V) when is_bitstring(V) ->
     Size = bit_size(V),
-    Padding = Size rem 8,
+    Padding = 8 - (Size rem 8) rem 8,
     Bytestring = << V/bitstring, 0:Padding >>,
     #erlangvalue{
 		  type='BITSTRING',
