@@ -74,4 +74,23 @@ fun_test() ->
 	 end,
     test(F2).
     
+empty_dict_test() ->
+    test(dict:new()).
+
+simple_orddict_test() ->
+    L = [{Key, now()} || Key <- lists:seq(1, 1000)],
+    D = orddict:from_list(L),
+    test(D).
+
+simple_dict_test() ->
+    L = [{Key, now()} || Key <- lists:seq(1, 1000)],
+    D = dict:from_list(L),
+    test(D).
+
+complex_dict_test() ->
+    D = dict:from_list([{a, b}, {b, a}, {d, c},
+			{c, d}, {e, f}, {g, <<"h">>},
+			{<<"i">>, j}, {"klm", dict:new()},
+			{"nop", dict:store(a, b, dict:store(d, e, dict:new()))}]),
+    test(D).
     

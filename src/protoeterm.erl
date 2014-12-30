@@ -77,6 +77,14 @@ i_term_to_proto(V, A) when is_integer(V) ->
 	intval=V
        }, A};
 
+i_term_to_proto([K|V], A) when not is_list(V) ->
+    {C1, A1} = i_term_to_proto(K, A),
+    {C2, A2} = i_term_to_proto(V, A1),
+    {#erlangvalue{
+	type='DICTPAIR',
+	listval=#erlanglist{ values=[C1, C2] }
+       }, A2};
+
 i_term_to_proto(V, A) when is_list(V) ->
     {Val, Atomtable}  = lists:foldl(fun(E, {Values, Atomtable0}) ->
 					    {Val1, Atomtable1} =
@@ -126,6 +134,9 @@ i_proto_to_term(#erlangvalue{type='FLOAT', doubleval=D}, _Atomtable) ->
     D;
 i_proto_to_term(#erlangvalue{type='INTEGER', intval=I}, _Atomtable) ->
     I;
+i_proto_to_term(#erlangvalue{type='DICTPAIR', listval=#erlanglist{values=L}}, Atomtable) ->
+    [Val1, Val2] = L,
+    [i_proto_to_term(Val1, Atomtable)|i_proto_to_term(Val2, Atomtable)];
 i_proto_to_term(#erlangvalue{type='LIST', listval=#erlanglist{values=L}}, Atomtable) ->
     lists:map(fun(E) -> i_proto_to_term(E, Atomtable) end, L);
 i_proto_to_term(#erlangvalue{type='TUPLE', listval=#erlanglist{values=L}}, Atomtable) ->

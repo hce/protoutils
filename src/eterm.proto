@@ -9,6 +9,8 @@ enum ErlangType {
 	// Everything we cannot encode without erlang bifs,
 	// meaning PIDs, references, functions and ports.
 	ERLTERM = 8;
+	// This is a hack for erlang's dict module
+	DICTPAIR = 9;
 }
 
 message ErlangValue {
