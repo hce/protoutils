@@ -18,6 +18,7 @@ message ErlangValue {
 	optional double doubleval = 3;
 	optional sint64 intval = 4;
 	optional ErlangList listval = 5;
+	optional uint32 shortval = 6;
 }
 
 message ErlangList {

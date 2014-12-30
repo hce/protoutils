@@ -47,7 +47,7 @@ i_term_to_proto(V, A) when is_atom(V) ->
 		       end,
     {#erlangvalue{
 	type='ATOM',
-	intval=AN
+	shortval=AN
        }, Atomtable1};
 
 i_term_to_proto(V, A) when is_binary(V)->
@@ -63,7 +63,7 @@ i_term_to_proto(V, A) when is_bitstring(V) ->
     {#erlangvalue{
 	type='BITSTRING',
 	stringval=Bytestring,
-	intval=Size
+	shortval=Size
        }, A};
 
 i_term_to_proto(V, A) when is_float(V) ->
@@ -114,12 +114,12 @@ proto_to_term(Structure, #erlangatomlist{atomname=Atomlist}) ->
 			    end, dict:new(), Atomlist),
     i_proto_to_term(Structure, Atomtable).
 
-i_proto_to_term(#erlangvalue{type='ATOM', intval=Atomnumber}, Atomtable) ->
+i_proto_to_term(#erlangvalue{type='ATOM', shortval=Atomnumber}, Atomtable) ->
     {ok, Atomname} = dict:find(Atomnumber, Atomtable),
     binary_to_existing_atom(Atomname, utf8);
 i_proto_to_term(#erlangvalue{type='BINARY', stringval=B}, _Atomtable) ->
     B;
-i_proto_to_term(#erlangvalue{type='BITSTRING', intval=L, stringval=B}, _Atomtable) ->
+i_proto_to_term(#erlangvalue{type='BITSTRING', shortval=L, stringval=B}, _Atomtable) ->
     << Bitstring:L/bitstring, _Padding/bitstring >> = B,
     Bitstring;
 i_proto_to_term(#erlangvalue{type='FLOAT', doubleval=D}, _Atomtable) ->
