@@ -12,29 +12,28 @@
 
 -export([term_to_protobin/1, protobin_to_term/1]).
 
--export([term_to_proto/1, proto_to_term/2]).
+-export([term_to_proto/1, proto_to_term/1]).
 
 term_to_protobin(Term) ->
-    {Structure, Atomlist} = term_to_proto(Term),
-    eterm_pb:encode(#erlangterm{
-		       atomlist=Atomlist,
-		       value=Structure}).
+    Erlangterm = term_to_proto(Term),
+    eterm_pb:encode(Erlangterm).
     
 protobin_to_term(Protobuf) ->
-    #erlangterm{atomlist=Atomlist,
-		value=Value} = eterm_pb:decode_erlangterm(Protobuf),
-    proto_to_term(Value, Atomlist).
+    Erlangterm = eterm_pb:decode_erlangterm(Protobuf),
+    proto_to_term(Erlangterm).
 
 term_to_proto(V) ->
     {Structure, Atomtable} = i_term_to_proto(V, dict:new()),
     Atomtable_O = dict:fold(fun(K, V_, A) ->
 				    orddict:store(V_, K, A)
 			    end, orddict:new(), Atomtable),
-    Atomtable1 = #erlangatomlist{
+    Atomlist = #erlangatomlist{
       atomname = [atom_to_binary(Atomname, utf8) ||
 		     {_Atomnumber, Atomname} <- orddict:to_list(Atomtable_O)]
      },
-    {Structure, Atomtable1}.    
+    #erlangterm{
+		 atomlist=Atomlist,
+		 value=Structure}.    
 
 i_term_to_proto(V, A) when is_atom(V) ->
     {Atomtable1, AN} = case dict:find(V, A) of
@@ -108,7 +107,8 @@ i_term_to_proto(V, A) ->
 		  stringval=Val
        }, A}.
 
-proto_to_term(Structure, #erlangatomlist{atomname=Atomlist}) ->
+proto_to_term(#erlangterm{value=Structure,
+			  atomlist=#erlangatomlist{atomname=Atomlist}}) ->
     Atomtable = lists:foldl(fun(E, A) ->
 				    dict:store(dict:size(A), E, A)
 			    end, dict:new(), Atomlist),
