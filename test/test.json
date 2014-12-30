@@ -1,0 +1,5 @@
+{"dict": {
+  "nesteddict": [   
+    { 1: 2, 3: 4, 5: "Hello world", "wello": "horld", 6: [1,2,3,4] },
+    { "bla": "fasel", "null": null, "true": true, false: "false"}
+  ]}}

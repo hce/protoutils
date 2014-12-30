@@ -1,0 +1,29 @@
+enum JSONType {
+        INTEGER = 1;
+        DOUBLE = 2;
+        STRING = 3;
+        BOOLEAN = 4;
+        NULL = 5;
+        ARRAY = 6;
+        OBJECT = 7;
+	UNDEFINED = 8;
+}
+
+message JSONValue {
+	optional JSONType type = 1;
+	optional sint32 intval = 2;
+	optional double doubleval = 3;
+	optional string stringval = 4;
+	optional bool boolval = 5;
+	optional JSONArray arrayval = 6;
+	optional JSONObject objectval = 7;
+}
+
+message JSONArray {
+	repeated JSONValue values = 1;
+}
+
+message JSONObject {
+	repeated JSONValue keys = 1;
+	repeated JSONValue values = 2;
+}
