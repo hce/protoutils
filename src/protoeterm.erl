@@ -12,86 +12,125 @@
 
 -export([term_to_protobin/1, protobin_to_term/1]).
 
--export([term_to_proto/1, proto_to_term/1]).
+-export([term_to_proto/1, proto_to_term/2]).
 
 term_to_protobin(Term) ->
-    eterm_pb:encode(term_to_proto(Term)).
-
+    {Structure, Atomlist} = term_to_proto(Term),
+    eterm_pb:encode(#erlangterm{
+		       atomlist=Atomlist,
+		       value=Structure}).
+    
 protobin_to_term(Protobuf) ->
-    proto_to_term(eterm_pb:decode_erlangvalue(Protobuf)).
+    #erlangterm{atomlist=Atomlist,
+		value=Value} = eterm_pb:decode_erlangterm(Protobuf),
+    proto_to_term(Value, Atomlist).
 
-term_to_proto(V) when is_atom(V) ->
-    #erlangvalue{
-		  type='ATOM',
-		  stringval=atom_to_binary(V, utf8)
-		};
+term_to_proto(V) ->
+    {Structure, Atomtable} = i_term_to_proto(V, dict:new()),
+    Atomtable_O = dict:fold(fun(K, V_, A) ->
+				    orddict:store(V_, K, A)
+			    end, orddict:new(), Atomtable),
+    Atomtable1 = #erlangatomlist{
+      atomname = [atom_to_binary(Atomname, utf8) ||
+		     {_Atomnumber, Atomname} <- orddict:to_list(Atomtable_O)]
+     },
+    {Structure, Atomtable1}.    
 
-term_to_proto(V) when is_binary(V)->
-    #erlangvalue{
-		  type='BINARY',
-		  stringval=V
-		};
+i_term_to_proto(V, A) when is_atom(V) ->
+    {Atomtable1, AN} = case dict:find(V, A) of
+			   {ok, Atomnumber} ->
+			       {A, Atomnumber};
+			   error ->
+			       %% This has a constant runtime in erlang :-)
+			       Atomnumber = dict:size(A),
+			       {dict:store(V, Atomnumber, A), Atomnumber}
+		       end,
+    {#erlangvalue{
+	type='ATOM',
+	intval=AN
+       }, Atomtable1};
 
-term_to_proto(V) when is_bitstring(V) ->
+i_term_to_proto(V, A) when is_binary(V)->
+    {#erlangvalue{
+	type='BINARY',
+	stringval=V
+       }, A};
+
+i_term_to_proto(V, A) when is_bitstring(V) ->
     Size = bit_size(V),
     Padding = 8 - (Size rem 8) rem 8,
     Bytestring = << V/bitstring, 0:Padding >>,
-    #erlangvalue{
-		  type='BITSTRING',
-		  stringval=Bytestring,
-		  intval=Size
-		};
+    {#erlangvalue{
+	type='BITSTRING',
+	stringval=Bytestring,
+	intval=Size
+       }, A};
 
-term_to_proto(V) when is_float(V) ->
-    #erlangvalue{
-		  type='FLOAT',
-		  doubleval=V
-		};
+i_term_to_proto(V, A) when is_float(V) ->
+    {#erlangvalue{
+	type='FLOAT',
+	doubleval=V
+       }, A};
 
-term_to_proto(V) when is_integer(V) ->
-    #erlangvalue{
-		  type='INTEGER',
-		  intval=V
-		};
+i_term_to_proto(V, A) when is_integer(V) ->
+    {#erlangvalue{
+	type='INTEGER',
+	intval=V
+       }, A};
 
-term_to_proto(V) when is_list(V) ->
-    Val = lists:map(fun term_to_proto/1, V),
-    #erlangvalue{
-		  type='LIST',
-		  listval=#erlanglist{ values=Val }
-		};
+i_term_to_proto(V, A) when is_list(V) ->
+    {Val, Atomtable}  = lists:foldl(fun(E, {Values, Atomtable0}) ->
+					    {Val1, Atomtable1} =
+						i_term_to_proto(E, Atomtable0),
+					    {[Val1|Values], Atomtable1}
+				    end, {[], A}, V),
+    {#erlangvalue{
+	type='LIST',
+	listval=#erlanglist{ values=lists:reverse(Val) }
+       }, Atomtable};
 
-term_to_proto(V) when is_tuple(V) ->
-    Val = lists:map(fun term_to_proto/1, tuple_to_list(V)),
-    #erlangvalue{
-		  type='TUPLE',
-		  listval=#erlanglist{ values=Val }
-		};
+i_term_to_proto(V, A) when is_tuple(V) ->
+    {Val, Atomtable}  = lists:foldl(fun(E, {Values, Atomtable0}) ->
+					    {Val1, Atomtable1} =
+						i_term_to_proto(E, Atomtable0),
+					    {[Val1|Values], Atomtable1}
+				    end, {[], A}, tuple_to_list(V)),
+    {#erlangvalue{
+	type='TUPLE',
+	listval=#erlanglist{ values=lists:reverse(Val) }
+       }, Atomtable};
 
 %% catchall case
-term_to_proto(V) ->
+i_term_to_proto(V, A) ->
     Val = term_to_binary(V),
-    #erlangvalue{
+    {#erlangvalue{
 		  type='ERLTERM',
 		  stringval=Val
-		}.
+       }, A}.
 
-proto_to_term(#erlangvalue{type='ATOM', stringval=A}) ->
-    binary_to_existing_atom(A, utf8);
-proto_to_term(#erlangvalue{type='BINARY', stringval=B}) ->
+proto_to_term(Structure, #erlangatomlist{atomname=Atomlist}) ->
+    Atomtable = lists:foldl(fun(E, A) ->
+				    dict:store(dict:size(A), E, A)
+			    end, dict:new(), Atomlist),
+    i_proto_to_term(Structure, Atomtable).
+
+i_proto_to_term(#erlangvalue{type='ATOM', intval=Atomnumber}, Atomtable) ->
+    {ok, Atomname} = dict:find(Atomnumber, Atomtable),
+    binary_to_existing_atom(Atomname, utf8);
+i_proto_to_term(#erlangvalue{type='BINARY', stringval=B}, _Atomtable) ->
     B;
-proto_to_term(#erlangvalue{type='BITSTRING', intval=L, stringval=B}) ->
+i_proto_to_term(#erlangvalue{type='BITSTRING', intval=L, stringval=B}, _Atomtable) ->
     << Bitstring:L/bitstring, _Padding/bitstring >> = B,
     Bitstring;
-proto_to_term(#erlangvalue{type='FLOAT', doubleval=D}) ->
+i_proto_to_term(#erlangvalue{type='FLOAT', doubleval=D}, _Atomtable) ->
     D;
-proto_to_term(#erlangvalue{type='INTEGER', intval=I}) ->
+i_proto_to_term(#erlangvalue{type='INTEGER', intval=I}, _Atomtable) ->
     I;
-proto_to_term(#erlangvalue{type='LIST', listval=#erlanglist{values=L}}) ->
-    lists:map(fun proto_to_term/1, L);
-proto_to_term(#erlangvalue{type='TUPLE', listval=#erlanglist{values=L}}) ->
-    list_to_tuple(lists:map(fun proto_to_term/1, L));
-proto_to_term(#erlangvalue{type='ERLTERM', stringval=T}) ->
+i_proto_to_term(#erlangvalue{type='LIST', listval=#erlanglist{values=L}}, Atomtable) ->
+    lists:map(fun(E) -> i_proto_to_term(E, Atomtable) end, L);
+i_proto_to_term(#erlangvalue{type='TUPLE', listval=#erlanglist{values=L}}, Atomtable) ->
+    list_to_tuple(lists:map(fun(E) -> i_proto_to_term(E, Atomtable) end, L));
+i_proto_to_term(#erlangvalue{type='ERLTERM', stringval=T}, _Atomtable) ->
     binary_to_term(T, [safe]). 
 
 

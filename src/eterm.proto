@@ -23,3 +23,12 @@ message ErlangValue {
 message ErlangList {
 	repeated ErlangValue values = 1;
 }
+
+message ErlangAtomList {
+	repeated string atomName = 1;
+}
+
+message ErlangTerm {
+	optional ErlangAtomList atomList = 1;
+	optional ErlangValue value = 2;
+}

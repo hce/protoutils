@@ -13,6 +13,7 @@ test(Term) ->
     Encoded = protoeterm:term_to_protobin(Term),
     Encoded_Flattened = iolist_to_binary(Encoded),
     Decoded = protoeterm:protobin_to_term(Encoded_Flattened),
+    io:format("Original: ~p~nDecoded: ~p~n", [Term, Decoded]),
     ?assertEqual(Term, Decoded).
 
 atom_test() ->
@@ -51,7 +52,7 @@ bitstring_test() ->
     test(<< >>).
 
 complicated_test() ->    
-    test({1, 2, atom, <<"binary">>, <<"bitstring", 4:4>>, [1, 2, 3, 4, foo, bar]}).
+    test({1, 2, foo, atom, <<"binary">>, <<"bitstring", 4:4>>, [1, 2, 3, 4, foo, bar]}).
 
 pid_test() ->
     test(self()),
